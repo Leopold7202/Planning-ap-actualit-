@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Planning AP Actualité</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background: #eaeaea;
+    }
+    td[contenteditable="true"]:focus {
+      outline: 2px solid #007bff;
+      background: #f0f8ff;
+    }
+  </style>
+</head>
+<body>
+  <h1>📅 Planning AP Actualité</h1>
+
+  <table id="planning-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Élève</th>
+        <th>Actualité choisie</th>
+        <th>Remarques</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Les lignes seront chargées depuis Firebase -->
+    </tbody>
+  </table>
+
+  <script>
+    // Configuration Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyAjdI8zsP5nADJz3tXDks9RMdgKrIDhsmY",
+      authDomain: "planning-ap-actualite.firebaseapp.com",
+      databaseURL: "https://planning-ap-actualite-default-rtdb.firebaseio.com",
+      projectId: "planning-ap-actualite",
+      storageBucket: "planning-ap-actualite.firebasestorage.app",
+      messagingSenderId: "554625312119",
+      appId: "1:554625312119:web:a04549cc85e74b62f36d72"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref("planning");
+
+    const tableBody = document.querySelector("#planning-table tbody");
+
+    // Générer 10 lignes par défaut si la base est vide
+    function generateDefaultRows() {
+      const dates = [
+        "15/10", "22/10", "05/11", "12/11", "19/11",
+        "26/11", "03/12", "10/12", "17/12", "07/01"
+      ];
+      dates.forEach((date, i) => {
+        db.child(i).set({
+          date: date,
+          eleve: "",
+          actualite: "",
+          remarques: ""
+        });
+      });
+    }
+
+    // Charger le tableau depuis Firebase
+    db.on("value", snapshot => {
+      const data = snapshot.val();
+      tableBody.innerHTML = "";
+      if (!data) {
+        generateDefaultRows();
+        return;
+      }
+      Object.keys(data).forEach(key => {
+        const row = data[key];
+        const tr = document.createElement("tr");
+        ["date", "eleve", "actualite", "remarques"].forEach(field => {
+          const td = document.createElement("td");
+          td.textContent = row[field] || "";
+          if (field !== "date") {
+            td.contentEditable = "true";
+            td.addEventListener("blur", () => {
+              db.child(key).child(field).set(td.textContent);
+            });
+          }
+          tr.appendChild(td);
+        });
+        tableBody.appendChild(tr);
+      });
+    });
+  </script>
+</body>
+</html>
