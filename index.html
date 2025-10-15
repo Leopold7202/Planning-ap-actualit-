@@ -2,14 +2,15 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Planning AP Actualité</title>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f5f5f5;
+      background: #f4f6f8;
+      margin: 0;
       padding: 20px;
     }
     h1 {
@@ -20,41 +21,46 @@
       width: 100%;
       border-collapse: collapse;
       background: white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     th, td {
-      border: 1px solid #ccc;
+      border: 1px solid #ddd;
       padding: 8px;
       text-align: center;
     }
     th {
-      background: #eaeaea;
+      background: #1976d2;
+      color: white;
     }
-    td[contenteditable="true"]:focus {
-      outline: 2px solid #007bff;
-      background: #f0f8ff;
+    td[contenteditable="true"] {
+      background: #eef6ff;
+      cursor: text;
+    }
+    tr:nth-child(even) {
+      background: #f9f9f9;
     }
   </style>
 </head>
 <body>
-  <h1>📅 Planning AP Actualité</h1>
 
-  <table id="planning-table">
+  <h1>📅 Planning AP Actualité - Mardis 2025/2026</h1>
+
+  <table id="planningTable">
     <thead>
       <tr>
         <th>Date</th>
-        <th>Élève</th>
-        <th>Actualité choisie</th>
-        <th>Remarques</th>
+        <th>Horaire</th>
+        <th>Nom de l'élève inscrit</th>
+        <th>Sujet de l'actualité</th>
       </tr>
     </thead>
     <tbody>
-      <!-- Les lignes seront chargées depuis Firebase -->
+      <!-- Les lignes seront générées ici -->
     </tbody>
   </table>
 
   <script>
-    // Configuration Firebase
+    // ✅ Ton code Firebase (ne le partage pas publiquement ailleurs)
     const firebaseConfig = {
       apiKey: "AIzaSyAjdI8zsP5nADJz3tXDks9RMdgKrIDhsmY",
       authDomain: "planning-ap-actualite.firebaseapp.com",
@@ -66,51 +72,52 @@
     };
 
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database().ref("planning");
+    const db = firebase.database();
+    const tableBody = document.querySelector('#planningTable tbody');
 
-    const tableBody = document.querySelector("#planning-table tbody");
+    // 📅 Les bonnes dates du planning (mardis un sur deux)
+    const planningDates = [
+      "04/11/2025","18/11/2025","02/12/2025","16/12/2025",
+      "13/01/2026","27/01/2026","10/02/2026","10/03/2026",
+      "24/03/2026","07/04/2026","05/05/2026","19/05/2026",
+      "02/06/2026","16/06/2026","30/06/2026"
+    ];
+    const horaire = "12h55 – 13h50";
 
-    // Générer 10 lignes par défaut si la base est vide
-    function generateDefaultRows() {
-      const dates = [
-        "15/10", "22/10", "05/11", "12/11", "19/11",
-        "26/11", "03/12", "10/12", "17/12", "07/01"
-      ];
-      dates.forEach((date, i) => {
-        db.child(i).set({
-          date: date,
-          eleve: "",
-          actualite: "",
-          remarques: ""
-        });
-      });
-    }
+    // 🧠 Génération dynamique du tableau
+    planningDates.forEach((date, index) => {
+      const tr = document.createElement('tr');
 
-    // Charger le tableau depuis Firebase
-    db.on("value", snapshot => {
-      const data = snapshot.val();
-      tableBody.innerHTML = "";
-      if (!data) {
-        generateDefaultRows();
-        return;
-      }
-      Object.keys(data).forEach(key => {
-        const row = data[key];
-        const tr = document.createElement("tr");
-        ["date", "eleve", "actualite", "remarques"].forEach(field => {
-          const td = document.createElement("td");
-          td.textContent = row[field] || "";
-          if (field !== "date") {
-            td.contentEditable = "true";
-            td.addEventListener("blur", () => {
-              db.child(key).child(field).set(td.textContent);
-            });
-          }
-          tr.appendChild(td);
-        });
-        tableBody.appendChild(tr);
+      tr.innerHTML = `
+        <td>${date}</td>
+        <td>${horaire}</td>
+        <td contenteditable="true" data-col="nom" data-index="${index}"></td>
+        <td contenteditable="true" data-col="sujet" data-index="${index}"></td>
+      `;
+      tableBody.appendChild(tr);
+    });
+
+    // 🔄 Synchronisation en temps réel depuis Firebase
+    const ref = db.ref('planning');
+    ref.on('value', snapshot => {
+      const data = snapshot.val() || {};
+      document.querySelectorAll('td[contenteditable="true"]').forEach(cell => {
+        const index = cell.getAttribute('data-index');
+        const col = cell.getAttribute('data-col');
+        cell.textContent = data[index]?.[col] || '';
       });
     });
+
+    // ✏️ Sauvegarde dès qu'on modifie une cellule
+    document.addEventListener('input', e => {
+      if (e.target.matches('td[contenteditable="true"]')) {
+        const index = e.target.getAttribute('data-index');
+        const col = e.target.getAttribute('data-col');
+        const value = e.target.textContent;
+        db.ref(`planning/${index}/${col}`).set(value);
+      }
+    });
   </script>
+
 </body>
 </html>
